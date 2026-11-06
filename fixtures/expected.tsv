@@ -1,0 +1,37 @@
+g01_single_query_big	pre	DONE	0	0	0
+g01_single_query_big	fix	DONE	0	0	0
+g01_single_query_big	size_only	DONE	0	0	0
+g02_dual_fits	pre	DONE	0	0	0
+g02_dual_fits	fix	DONE	0	0	0
+g02_dual_fits	size_only	DONE	0	0	0
+g03_second_in_remainder	pre	DONE	0	0	0
+g03_second_in_remainder	fix	DONE	0	0	0
+g03_second_in_remainder	size_only	DONE	0	0	0
+g04_second_too_big	pre	DONE	0	0	0
+g04_second_too_big	fix	DONE	0	0	0
+g04_second_too_big	size_only	DONE	0	0	0
+g05_same_call_retry	pre	OVERFLOW	952	1	4
+g05_same_call_retry	fix	RUNNING	0	0	0
+g05_same_call_retry	size_only	RUNNING	0	0	0
+g06_cross_call	pre	OVERFLOW	952	1	4
+g06_cross_call	fix	DONE	0	0	0
+g06_cross_call	size_only	OVERFLOW	952	1	4
+g07_single_request_option	pre	OVERFLOW	952	1	4
+g07_single_request_option	fix	RUNNING	0	0	0
+g07_single_request_option	size_only	RUNNING	0	0	0
+g08_claim_without_overflow	pre	DONE	0	1	4
+g08_claim_without_overflow	fix	DONE	0	0	0
+g08_claim_without_overflow	size_only	DONE	0	1	4
+g09_calls_exhausted	pre	EXHAUSTED	0	0	0
+g09_calls_exhausted	fix	EXHAUSTED	0	0	0
+g09_calls_exhausted	size_only	EXHAUSTED	0	0	0
+g10_undersized_second	pre	RETURNED_ZERO	0	0	0
+g10_undersized_second	fix	RETURNED_ZERO	0	0	0
+g10_undersized_second	size_only	RETURNED_ZERO	0	0	0
+g11_answer_then_timeouts	pre	EXHAUSTED	0	0	0
+g11_answer_then_timeouts	fix	EXHAUSTED	0	0	0
+g11_answer_then_timeouts	size_only	EXHAUSTED	0	0	0
+#explore depth=5 dual=1 single=0 calls=2
+pre	1176	14796	42471	4400
+fix	0	15120	43875	0
+size_only	540	14868	43371	1800

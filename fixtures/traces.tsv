@@ -1,0 +1,12 @@
+# id	dual	single	events (SIZE:1|2|x datagram, T timeout)
+g01_single_query_big	0	0	3000:1
+g02_dual_fits	1	0	100:1,100:2
+g03_second_in_remainder	1	0	100:1,1500:2
+g04_second_too_big	1	0	100:1,3000:2
+g05_same_call_retry	1	0	100:1,3000:x,T,3000:1
+g06_cross_call	1	0	3000:x,T,100:1,3000:2
+g07_single_request_option	1	1	100:1,3000:x,T,3000:1
+g08_claim_without_overflow	1	0	3000:x,T,100:1,100:2
+g09_calls_exhausted	1	0	T,T
+g10_undersized_second	1	0	100:1,8:2
+g11_answer_then_timeouts	1	0	100:1,T,T,T
