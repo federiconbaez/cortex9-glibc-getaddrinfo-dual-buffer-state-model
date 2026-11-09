@@ -32,3 +32,8 @@
   glibc.
 - This is not a new finding. The "size-only" result is a property of this
   model.
+- **Input domain:** `cx9_explore` accepts depth 0..10 and the three known
+  versions; anything else returns -1 with a zeroed result (the depth is
+  never clamped). `cx9_room` returns `CX9_ROOM_INVALID` without reading
+  `cap[]` for a region outside the live regions or an offset outside
+  0..cap. The CLI parses numbers with checked `strtol`.

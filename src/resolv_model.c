@@ -6,15 +6,22 @@
 const char *cx9_end_name(cx9_end e) {
   static const char *n[] = {"RUNNING", "OVERFLOW", "DONE", "RETURNED_ONE",
                             "RETURNED_ZERO", "EXHAUSTED", "MODEL_LIMIT"};
+  if ((int)e < 0 || (int)e >= (int)(sizeof n / sizeof n[0])) return "UNKNOWN";
   return n[e];
 }
 const char *cx9_version_name(cx9_version v) {
   static const char *n[] = {"pre", "fix", "size_only"};
+  if ((int)v < 0 || (int)v >= (int)(sizeof n / sizeof n[0])) return "unknown";
   return n[v];
 }
 
 int cx9_room(const cx9_state *s, cx9_ptr p) {
-  if (p.region < 0) return -1;
+  /* validate before indexing cap[]: never read outside the live regions */
+  if (!s || s->nregions < 1 || s->nregions > CX9_MAX_REGIONS)
+    return CX9_ROOM_INVALID;
+  if (p.region == -1) return CX9_ROOM_NULL;
+  if (p.region < 0 || p.region >= s->nregions) return CX9_ROOM_INVALID;
+  if (p.off < 0 || p.off > s->cap[p.region]) return CX9_ROOM_INVALID;
   return s->cap[p.region] - p.off;
 }
 
@@ -130,6 +137,10 @@ static void datagram(cx9_state *s, int size, int id) {
   /* recvfrom(fd, *thisansp, *thisanssizp, ...) */
   claim = *sizp;
   room = cx9_room(s, *ptrp);
+  if (room == CX9_ROOM_INVALID) {     /* not reachable from cx9_init/step */
+    s->end = CX9_MODEL_LIMIT;
+    return;
+  }
   s->last_claim = claim;
   s->last_room = room;
   n = size < claim ? size : claim;

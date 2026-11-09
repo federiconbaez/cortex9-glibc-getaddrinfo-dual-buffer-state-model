@@ -1,4 +1,5 @@
 #include "explore.h"
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +40,20 @@ static int run_trace(cx9_state *s, const char *events, int verbose) {
 static cx9_version parse_version(const char *v) {
   if (strcmp(v, "fix") == 0) return CX9_FIX;
   if (strcmp(v, "size_only") == 0) return CX9_SIZE_ONLY;
-  return CX9_PRE;
+  if (strcmp(v, "pre") == 0) return CX9_PRE;
+  return (cx9_version)-1;
+}
+
+/* Strict decimal in [lo, hi]: digits only (optional '-'), no junk. */
+static int parse_int(const char *s, int lo, int hi, int *out) {
+  char *end;
+  long v;
+  if (!s || !(*s == '-' || (*s >= '0' && *s <= '9'))) return -1;
+  errno = 0;
+  v = strtol(s, &end, 10);
+  if (errno || *end || v < lo || v > hi) return -1;
+  *out = (int)v;
+  return 0;
 }
 
 static int results(const char *traces, const char *out) {
@@ -57,6 +71,11 @@ static int results(const char *traces, const char *out) {
     int d, sg;
     if (line[0] == '#' || line[0] == '\n') continue;
     if (sscanf(line, "%63s %d %d %1000s", id, &d, &sg, ev) != 4) continue;
+    if (d < 0 || d > 1 || sg < 0 || sg > 1) {
+      fprintf(stderr, "bad dual/single in %s\n", id);
+      fclose(in); fclose(f);
+      return 1;
+    }
     for (v = 0; v < 3; ++v) {
       cx9_state s;
       cx9_init(&s, (cx9_version)v, d, sg, 2);
@@ -79,7 +98,10 @@ static int results(const char *traces, const char *out) {
     for (dual = 1; dual >= 0; --dual)
       for (single = 0; single <= 1; ++single) {
         cx9_explore_result r;
-        cx9_explore((cx9_version)v, dual, single, 2, 7, &r);
+        if (cx9_explore((cx9_version)v, dual, single, 2, 7, &r)) {
+          fclose(f);
+          return 1;
+        }
         fprintf(f, "%s,%d,%d,2,7,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%d,%s\n",
                 cx9_version_name((cx9_version)v), dual, single,
                 r.terminal[CX9_OVERFLOW], r.terminal[CX9_DONE],
@@ -95,9 +117,14 @@ static int results(const char *traces, const char *out) {
 int main(int argc, char **argv) {
   if (argc >= 3 && strcmp(argv[1], "trace") == 0) {
     cx9_state s;
-    int dual = argc > 4 ? atoi(argv[4]) : 1;
-    int single = argc > 5 ? atoi(argv[5]) : 0;
-    cx9_init(&s, parse_version(argv[2]), dual, single, 2);
+    int dual = 1, single = 0;
+    cx9_version ver = parse_version(argv[2]);
+    if ((int)ver < 0 || (argc > 4 && parse_int(argv[4], 0, 1, &dual)) ||
+        (argc > 5 && parse_int(argv[5], 0, 1, &single)) || argc > 6) {
+      fprintf(stderr, "bad version, dual or single (each 0|1)\n");
+      return 2;
+    }
+    cx9_init(&s, ver, dual, single, 2);
     if (argc < 4 || run_trace(&s, argv[3], 1)) return 2;
     printf("end=%s past_end=%d claim_violations=%d\n", cx9_end_name(s.end),
            s.past_end, s.claim_violations);
@@ -107,8 +134,12 @@ int main(int argc, char **argv) {
     return results(argv[2], argv[3]);
   if (argc >= 3 && strcmp(argv[1], "explore") == 0) {
     cx9_explore_result r;
-    int depth = argc > 3 ? atoi(argv[3]) : 7;
-    cx9_explore(parse_version(argv[2]), 1, 0, 2, depth, &r);
+    int depth = 7;
+    if (argc > 4 || (argc > 3 && parse_int(argv[3], 0, CX9_MAX_DEPTH, &depth)) ||
+        cx9_explore(parse_version(argv[2]), 1, 0, 2, depth, &r)) {
+      fprintf(stderr, "bad version or depth (0..%d)\n", CX9_MAX_DEPTH);
+      return 2;
+    }
     printf("overflow=%ld done=%ld cut=%ld claim=%ld max_past=%d shortest=%s\n",
            r.terminal[CX9_OVERFLOW], r.terminal[CX9_DONE], r.cut_at_depth,
            r.with_claim_violation, r.max_past_end,

@@ -21,6 +21,9 @@ typedef struct {
 
 extern const char *const cx9_alphabet[CX9_ALPHABET];
 
-void cx9_explore(cx9_version v, int dual, int single, int calls_max,
-                 int depth, cx9_explore_result *r);
+/* Returns 0, or -1 (r zeroed, nothing explored) when depth is outside
+ * 0..CX9_MAX_DEPTH, r is NULL or v is not a known version. Depth is never
+ * clamped silently. */
+int cx9_explore(cx9_version v, int dual, int single, int calls_max,
+                int depth, cx9_explore_result *r);
 #endif

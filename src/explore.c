@@ -55,14 +55,17 @@ static void dfs(const cx9_state *s, int *path, int len, int depth,
   }
 }
 
-void cx9_explore(cx9_version v, int dual, int single, int calls_max,
-                 int depth, cx9_explore_result *r) {
+int cx9_explore(cx9_version v, int dual, int single, int calls_max,
+                int depth, cx9_explore_result *r) {
   cx9_state s;
   int path[CX9_MAX_DEPTH];
   int k;
+  if (!r) return -1;
   memset(r, 0, sizeof *r);
-  if (depth > CX9_MAX_DEPTH) depth = CX9_MAX_DEPTH;
+  if (depth < 0 || depth > CX9_MAX_DEPTH) return -1;
+  if ((int)v < (int)CX9_PRE || (int)v > (int)CX9_SIZE_ONLY) return -1;
   for (k = 0; k < CX9_ALPHABET; ++k) cx9_parse_event(cx9_alphabet[k], &events[k]);
   cx9_init(&s, v, dual, single, calls_max);
   dfs(&s, path, 0, depth, r);
+  return 0;
 }

@@ -53,5 +53,10 @@ void cx9_step(cx9_state *s, cx9_event e);
 int cx9_parse_event(const char *tok, cx9_event *e);
 const char *cx9_end_name(cx9_end e);
 const char *cx9_version_name(cx9_version v);
-int cx9_room(const cx9_state *s, cx9_ptr p); /* -1 for NULL */
+/* Room left in region p.region from p.off. CX9_ROOM_NULL for the NULL
+ * pointer (region -1); CX9_ROOM_INVALID, without reading cap[], for a NULL
+ * state, region < -1 or >= nregions, or off outside 0..cap[region]. */
+#define CX9_ROOM_NULL (-1)
+#define CX9_ROOM_INVALID (-2)
+int cx9_room(const cx9_state *s, cx9_ptr p);
 #endif

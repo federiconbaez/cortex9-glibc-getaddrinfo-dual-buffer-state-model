@@ -155,10 +155,69 @@ static void practice(void) {
         "practice_level_8");
 }
 
+/* Adversarial API inputs: each must be refused explicitly, with no read
+ * outside cap[] (this file runs under ASan + UBSan, no recovery). */
+static void test_adversarial(void) {
+  cx9_explore_result r;
+  cx9_state s;
+  cx9_ptr p;
+  int bad_depths[] = {-1, -1000, CX9_MAX_DEPTH + 1, 1000000};
+  unsigned i;
+  for (i = 0; i < sizeof bad_depths / sizeof bad_depths[0]; ++i) {
+    r.cut_at_depth = 77;
+    CHECK(cx9_explore(CX9_PRE, 1, 0, 2, bad_depths[i], &r) == -1, "depth refused");
+    CHECK(r.cut_at_depth == 0 && r.terminal[CX9_OVERFLOW] == 0, "refused depth: zeroed");
+  }
+  CHECK(cx9_explore(CX9_PRE, 1, 0, 2, 3, NULL) == -1, "NULL result refused");
+  CHECK(cx9_explore((cx9_version)7, 1, 0, 2, 3, &r) == -1, "bad version refused");
+  CHECK(cx9_explore((cx9_version)-1, 1, 0, 2, 3, &r) == -1, "negative version refused");
+  CHECK(cx9_explore(CX9_PRE, 1, 0, 2, 0, &r) == 0 && r.cut_at_depth == 1, "depth 0 ok");
+  CHECK(cx9_explore(CX9_FIX, 1, 0, 2, 3, &r) == 0, "depth 3 ok");
+
+  cx9_init(&s, CX9_PRE, 1, 0, 2);
+  p.region = -1; p.off = 0;
+  CHECK(cx9_room(&s, p) == CX9_ROOM_NULL, "room NULL ptr");
+  p.region = 0; p.off = 0;
+  CHECK(cx9_room(&s, p) == CX9_USER_CAP, "room USER start");
+  p.off = CX9_USER_CAP;
+  CHECK(cx9_room(&s, p) == 0, "room USER end");
+  p.off = CX9_USER_CAP + 1;
+  CHECK(cx9_room(&s, p) == CX9_ROOM_INVALID, "room off past cap");
+  p.off = -1;
+  CHECK(cx9_room(&s, p) == CX9_ROOM_INVALID, "room off negative");
+  p.off = 0;
+  p.region = 1; /* only region 0 exists after init */
+  CHECK(cx9_room(&s, p) == CX9_ROOM_INVALID, "room region == nregions");
+  p.region = CX9_MAX_REGIONS;
+  CHECK(cx9_room(&s, p) == CX9_ROOM_INVALID, "room region == MAX");
+  p.region = 2147483647;
+  CHECK(cx9_room(&s, p) == CX9_ROOM_INVALID, "room region INT_MAX");
+  p.region = -2;
+  CHECK(cx9_room(&s, p) == CX9_ROOM_INVALID, "room region -2");
+  p.region = 0;
+  CHECK(cx9_room(NULL, p) == CX9_ROOM_INVALID, "room NULL state");
+  s.nregions = CX9_MAX_REGIONS + 1;
+  CHECK(cx9_room(&s, p) == CX9_ROOM_INVALID, "room corrupt nregions");
+  s.nregions = 0;
+  CHECK(cx9_room(&s, p) == CX9_ROOM_INVALID, "room zero nregions");
+  /* a corrupted pointer inside a step ends the run as MODEL_LIMIT */
+  cx9_init(&s, CX9_PRE, 1, 0, 2);
+  s.ans.region = 5; s.anscp.region = 5; s.ansp2.region = 5;
+  {
+    cx9_event e;
+    CHECK(cx9_parse_event("100:1", &e) == 0, "parse event");
+    cx9_step(&s, e);
+    CHECK(s.end == CX9_MODEL_LIMIT || s.end == CX9_RUNNING, "corrupt ptr: no OOB read");
+  }
+  CHECK(strcmp(cx9_end_name((cx9_end)99), "UNKNOWN") == 0, "end name range");
+  CHECK(strcmp(cx9_version_name((cx9_version)-1), "unknown") == 0, "version name range");
+}
+
 int main(int argc, char **argv) {
   test_fixtures(argc > 1 ? argv[1] : "fixtures");
   test_invariants();
   practice();
+  test_adversarial();
   printf("%d checks, %d failures\n", checks, failures);
   return failures ? 1 : 0;
 }
